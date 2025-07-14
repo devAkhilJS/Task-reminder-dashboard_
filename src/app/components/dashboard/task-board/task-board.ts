@@ -211,29 +211,7 @@ export class TaskBoard implements OnInit, OnDestroy {
     this.subscriptions.push(taskSubscription);
   }
 
-  clearAllTasks() {
-    if (!this.auth.currentUser) {
-      console.error('User not authenticated');
-      return;
-    }
-
-    const confirmed = confirm('Are you sure you want to delete all tasks? This action cannot be undone.');
-    if (confirmed) {
-      const taskSubscription = this.taskService.clearAllTasks()
-        .subscribe({
-          next: () => {
-            console.log('All tasks cleared successfully');
-            this.allTasksSubject.next([]);
-            this.filterTasks(this.currentPeriod);
-          },
-          error: (error) => {
-            console.error('Error clearing tasks:', error);
-          }
-        });
-      
-      this.subscriptions.push(taskSubscription);
-    }
-  }
+  
 
   getCompletedCount(): number {
     return this.filteredTasksSubject.getValue().filter(t => t.completed).length;

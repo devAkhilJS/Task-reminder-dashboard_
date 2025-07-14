@@ -6,4 +6,5 @@ export interface Task {
   dueDate: Date;
   createdAt: Date;
   city:string;
+   userId?: string;
 }
