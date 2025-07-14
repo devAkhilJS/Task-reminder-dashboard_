@@ -133,7 +133,6 @@
   outline-offset: 2px;
 }
 
-/* Responsive Design */
 @media (max-width: 768px) {
   .task-item {
     padding: 16px;
@@ -187,7 +186,7 @@
   }
 }
 
-/* Print Styles */
+
 @media print {
   .task-actions {
     display: none;

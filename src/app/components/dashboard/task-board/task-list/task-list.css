@@ -57,7 +57,6 @@
   background: #5a67d8;
 }
 
-/* Responsive Design */
 @media (max-width: 768px) {
   .task-list-section {
     padding: 20px;
@@ -100,7 +99,6 @@
   }
 }
 
-/* Print Styles */
 @media print {
   .task-list-section {
     box-shadow: none;
