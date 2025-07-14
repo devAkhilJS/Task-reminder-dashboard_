@@ -1,0 +1,440 @@
+{
+  "name": "My workflow 11",
+  "nodes": [
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1IpmBHehkvFtV90EIB7aaNr6ZtcQc9m0WvNAFBRFbTZI",
+          "mode": "list",
+          "cachedResultName": "B4",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1IpmBHehkvFtV90EIB7aaNr6ZtcQc9m0WvNAFBRFbTZI/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1IpmBHehkvFtV90EIB7aaNr6ZtcQc9m0WvNAFBRFbTZI/edit#gid=0"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.6,
+      "position": [
+        -3280,
+        40
+      ],
+      "id": "a5d64124-38ca-4864-b034-0c96f9ad1aa1",
+      "name": "Get row(s) in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "eApo0mpOEaPWcJn8",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "f505e59d-43f0-44af-b2ca-4fc8dfa3fc00",
+              "leftValue": "={{ $json.City }}",
+              "rightValue": "=",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -2300,
+        -20
+      ],
+      "id": "bf7a2ba1-eca4-4d15-9af7-c6f68640ae49",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "url": "=http://api.openweathermap.org/geo/1.0/direct",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "q",
+              "value": "={{$json[\"City\"]}}"
+            },
+            {
+              "name": "limit",
+              "value": "1"
+            },
+            {
+              "name": "appid",
+              "value": "fda5c685b27cebe6ba17b130101113e3"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -2020,
+        -80
+      ],
+      "id": "6dbdec37-235b-4d52-b667-e0c5707da8d7",
+      "name": "fetch geo coding  coordinates"
+    },
+    {
+      "parameters": {
+        "url": "https://api.openweathermap.org/data/2.5/weather",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "lat",
+              "value": "={{ $json.lat }}"
+            },
+            {
+              "name": "lon",
+              "value": "={{ $json.lon }}"
+            },
+            {
+              "name": "appid",
+              "value": "fda5c685b27cebe6ba17b130101113e3"
+            },
+            {
+              "name": "units",
+              "value": "metric"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -1740,
+        -140
+      ],
+      "id": "047c5514-294c-4f8f-a98a-70c6e933c65f",
+      "name": "fetch weather temp?"
+    },
+    {
+      "parameters": {
+        "jsCode": "const currentUser = $('Loop Over Items').item.json;\nconst weatherData = $('fetch weather temp?').item.json;\n\nif (!currentUser || !weatherData) {\n  throw new Error('Missing required user or weather data');\n}\n\nconst temp = weatherData.main?.temp ? weatherData.main.temp.toFixed(1) : 'N/A';\nconst description = weatherData.weather?.[0]?.description || 'No weather data';\nconst cityName = weatherData.name || currentUser.City || 'Unknown City';\nconst taskDate = currentUser[\"Task Date\"] || currentUser[\"Date\"] || new Date().toLocaleDateString(); \n\nconsole.log('Task Name from data:', currentUser[\"Task Name\"]);\nconsole.log('Task Name from ayushi:', currentUser[\"Task Name\"]);\n\nlet taskList = \"No tasks assigned for today\";\nif (currentUser[\"Task Name\"] && currentUser[\"Task Name\"].trim() !== '') {\n  const rawTasks = currentUser[\"Task Name\"];\n  const taskLines = rawTasks.split('\\n').filter(line => line.trim() !== '');\n  \n  if (taskLines.length > 0) {\n    const formattedTasks = taskLines.map((task, index) => {\n      let cleanTask = task.replace(/^\\d+\\.\\s*/, '').trim();\n      return cleanTask ? `• ${cleanTask}` : null;\n    }).filter(task => task !== null);\n    \n    if (formattedTasks.length > 0) {\n      taskList = formattedTasks.join('\\n');\n    }\n  }\n}\n\n// Fix: Actually include taskList in the email message\nconst emailMessage = `Hi ${currentUser.User_name || currentUser.name || 'there'},\n\nHere's your daily update for ${taskDate}:\n\n Weather in ${cityName}:\n${description.charAt(0).toUpperCase() + description.slice(1)}, ${temp}°C\n\n Your To-Do List:\n${taskList}\n\nHave a productive day!\n\nBest regards,\nYour Personal Assistant`;\n\nconst taskCount = currentUser[\"Task Name\"] && currentUser[\"Task Name\"].trim() !== '' \n  ? currentUser[\"Task Name\"].split('\\n').filter(line => line.trim() !== '').length \n  : 0;\n\nreturn [{\n  json: {\n    email: currentUser.Email || currentUser.email,\n    name: currentUser.User_name || currentUser.name,\n    city: currentUser.City || currentUser.city,\n    date: taskDate,\n    subject: `Daily Update for ${currentUser.User_name || currentUser.name} - ${cityName} Weather & Tasks (${taskDate})`,\n    message: emailMessage,\n    weatherInfo: {\n      city: cityName,\n      temperature: temp,\n      description: description\n    },\n    taskCount: taskCount,\n    taskList: taskList // Add this for debugging\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -900,
+        -80
+      ],
+      "id": "9db3bdbc-5ba0-40f3-a74f-f936908f6030",
+      "name": "Code"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 0 8 * * *"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -3500,
+        40
+      ],
+      "id": "10c4d4a2-b608-4ea5-beb0-f5dc2e0f8d4e",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        -3080,
+        80
+      ],
+      "id": "713f48de-366c-4272-9a39-6fc0dc403b49",
+      "name": "Loop Over Items"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "94228842-604f-4cc4-ba90-d8abe0d41a8d",
+              "name": "={{ $json.Email }}",
+              "value": "={{ $json[\"Email\"].toLowerCase().trim() }}\n",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -2800,
+        -20
+      ],
+      "id": "ff4a1fa3-b175-4db9-9001-da1530187dc6",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "errorMessage": "City value is missing for the user. Please check the input data."
+      },
+      "type": "n8n-nodes-base.stopAndError",
+      "typeVersion": 1,
+      "position": [
+        -2000,
+        120
+      ],
+      "id": "aba32a52-1ed3-41a6-a6bb-4c023c5b7b7c",
+      "name": "Stop and Error"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.email }}",
+        "subject": "Weather and Task updates",
+        "emailType": "text",
+        "message": "={{ $json.message }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        -660,
+        120
+      ],
+      "id": "1acec548-aa89-468b-91ed-d7f9208c43ac",
+      "name": "Send a message",
+      "webhookId": "9b0a87c4-2019-45a6-917e-c72e19db14e6",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "0YXf8hQbvhi3WFwV",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "0d23631c-5f48-42e9-b58a-e90f96537651",
+              "leftValue": "={{ $json[\"Task Date\"].split(\"T\")[0] }}",
+              "rightValue": "={{ new Date().toISOString().split(\"T\")[0] }}",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {
+          "ignoreCase": true
+        }
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -2540,
+        -20
+      ],
+      "id": "4aa6eaa6-aa6c-4f29-bbc0-11ddd6b92db1",
+      "name": "If1"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        -2320,
+        160
+      ],
+      "id": "fb744b27-ef7d-4cf7-99ed-27c00c1f1619",
+      "name": "No Operation, do nothing"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Get row(s) in sheet": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "fetch geo coding  coordinates",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Stop and Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "fetch geo coding  coordinates": {
+      "main": [
+        [
+          {
+            "node": "fetch weather temp?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "fetch weather temp?": {
+      "main": [
+        [
+          {
+            "node": "Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get row(s) in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "If1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a message": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If1": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "No Operation, do nothing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "No Operation, do nothing": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "3ea7facf-adfb-4d7c-8117-875d2cc1ee92",
+  "meta": {
+    "instanceId": "83b761825fe009c350ac0b22db13da3271ed1c3fb3c350cd3dffb40fbed22eb0"
+  },
+  "id": "yrzd3FAjidSgxAyb",
+  "tags": []
+}
