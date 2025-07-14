@@ -1,7 +1,7 @@
 import { Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute } from '@angular/router';
-import { BehaviorSubject, Observable, Subscription } from 'rxjs';
+import { BehaviorSubject, Observable, Subscription, finalize } from 'rxjs';
 import { Auth } from '@angular/fire/auth';
 import { Task } from './task-interface';
 import { TaskList } from './task-list/task-list';
@@ -124,6 +124,7 @@ export class TaskBoard implements OnInit, OnDestroy {
 
     const taskSubscription = this.taskService.addTask(newTask).subscribe({
       next: (taskId) => {
+        // Add task to local state
         const taskWithId = { ...newTask, id: taskId };
         const currentTasks = this.allTasksSubject.getValue();
         const updatedTasks = [...currentTasks, taskWithId];
@@ -144,22 +145,35 @@ export class TaskBoard implements OnInit, OnDestroy {
       return;
     }
 
-    const updatedTask = { ...task, completed: !task.completed };
-    
-    const taskSubscription = this.taskService.updateTask(task.id, { completed: !task.completed }).subscribe({
+    if (!task.id || task.id.trim() === '') {
+      console.error('Invalid task ID for toggle');
+      return;
+    }
+
+    const newCompletedState = !task.completed;
+
+    const taskSubscription = this.taskService.updateTask(task.id, { completed: newCompletedState }).subscribe({
       next: () => {
+        console.log('Task updated successfully in Firebase');
         const allTasks = this.allTasksSubject.getValue();
-        const updatedTasks = allTasks.map(t => 
-          t.id === task.id ? updatedTask : t
+        const updatedTasks = allTasks.map(t =>
+          t.id === task.id ? { ...t, completed: newCompletedState } : t
         );
         this.allTasksSubject.next(updatedTasks);
         this.filterTasks(this.currentPeriod);
       },
       error: (error) => {
         console.error('Error updating task:', error);
+        // Optionally, show an error message to the user
+      },
+      complete: () => {
+        const index = this.subscriptions.indexOf(taskSubscription);
+        if (index > -1) {
+          this.subscriptions.splice(index, 1);
+        }
       }
     });
-    
+
     this.subscriptions.push(taskSubscription);
   }
 
@@ -169,18 +183,31 @@ export class TaskBoard implements OnInit, OnDestroy {
       return;
     }
 
+    if (!task.id || task.id.trim() === '') {
+      console.error('Invalid task ID for delete');
+      return;
+    }
+
     const taskSubscription = this.taskService.deleteTask(task.id).subscribe({
       next: () => {
-        const allTasks = this.allTasksSubject.getValue();
-        const updatedTasks = allTasks.filter(t => t.id !== task.id);
+        console.log('Task deleted successfully from Firebase');
+        const currentTasks = this.allTasksSubject.getValue();
+        const updatedTasks = currentTasks.filter(t => t.id !== task.id);
         this.allTasksSubject.next(updatedTasks);
         this.filterTasks(this.currentPeriod);
       },
       error: (error) => {
         console.error('Error deleting task:', error);
+        // Optionally, show an error message to the user
+      },
+      complete: () => {
+        const index = this.subscriptions.indexOf(taskSubscription);
+        if (index > -1) {
+          this.subscriptions.splice(index, 1);
+        }
       }
     });
-    
+
     this.subscriptions.push(taskSubscription);
   }
 
@@ -192,15 +219,17 @@ export class TaskBoard implements OnInit, OnDestroy {
 
     const confirmed = confirm('Are you sure you want to delete all tasks? This action cannot be undone.');
     if (confirmed) {
-      const taskSubscription = this.taskService.clearAllTasks().subscribe({
-        next: () => {
-          this.allTasksSubject.next([]);
-          this.filterTasks(this.currentPeriod);
-        },
-        error: (error) => {
-          console.error('Error clearing tasks:', error);
-        }
-      });
+      const taskSubscription = this.taskService.clearAllTasks()
+        .subscribe({
+          next: () => {
+            console.log('All tasks cleared successfully');
+            this.allTasksSubject.next([]);
+            this.filterTasks(this.currentPeriod);
+          },
+          error: (error) => {
+            console.error('Error clearing tasks:', error);
+          }
+        });
       
       this.subscriptions.push(taskSubscription);
     }

@@ -12,6 +12,7 @@ import {
   orderBy,
   Timestamp 
 } from '@angular/fire/firestore';
+import { HttpClient } from '@angular/common/http'; 
 import { Task } from '../components/dashboard/task-board/task-interface';
 import { Observable, from, map } from 'rxjs';
 
@@ -21,7 +22,12 @@ import { Observable, from, map } from 'rxjs';
 export class TaskFirebaseService {
   private auth = inject(Auth);
   private firestore = inject(Firestore);
+  private http = inject(HttpClient); 
 
+  
+  private webhookUrl = 'https://pleasant-macaw-deadly.ngrok-free.app/webhook-test/8f6008b3-6540-4045-986d-2014bdbbf594';
+
+  
   getUserTasks(): Observable<Task[]> {
     const user = this.auth.currentUser;
     if (!user) {
@@ -47,6 +53,7 @@ export class TaskFirebaseService {
     );
   }
 
+ 
   addTask(task: Omit<Task, 'id'>): Observable<string> {
     const user = this.auth.currentUser;
     if (!user) {
@@ -54,6 +61,7 @@ export class TaskFirebaseService {
     }
 
     const tasksCollection = collection(this.firestore, 'users', user.uid, 'tasks');
+    
     
     const taskData = {
       ...task,
@@ -63,10 +71,27 @@ export class TaskFirebaseService {
     };
 
     return from(addDoc(tasksCollection, taskData)).pipe(
-      map(docRef => docRef.id)
+      map(docRef => {
+        
+        this.sendWebhookData({
+          userEmail: user.email,
+          userUid: user.uid,
+          taskId: docRef.id,
+          taskTitle: task.title,
+          taskDescription: task.description,
+          taskDueDate: task.dueDate.toISOString(),
+          taskCreatedAt: task.createdAt.toISOString(),
+          taskCompleted: task.completed,
+          taskcity: task.city,
+          timestamp: new Date().toISOString()
+        });
+        
+        return docRef.id;
+      })
     );
   }
 
+  
   updateTask(taskId: string, updates: Partial<Task>): Observable<void> {
     const user = this.auth.currentUser;
     if (!user) {
@@ -75,7 +100,7 @@ export class TaskFirebaseService {
 
     const taskDoc = doc(this.firestore, 'users', user.uid, 'tasks', taskId);
     
-    const updateData: any = { ...updates };
+        const updateData: any = { ...updates };
     if (updates.dueDate) {
       updateData.dueDate = Timestamp.fromDate(updates.dueDate);
     }
@@ -83,9 +108,15 @@ export class TaskFirebaseService {
       updateData.createdAt = Timestamp.fromDate(updates.createdAt);
     }
 
-    return from(updateDoc(taskDoc, updateData));
+    return from(updateDoc(taskDoc, updateData)).pipe(
+      map(() => {
+        console.log(`Task ${taskId} updated in Firebase`);
+        return void 0;
+      })
+    );
   }
 
+  
   deleteTask(taskId: string): Observable<void> {
     const user = this.auth.currentUser;
     if (!user) {
@@ -93,9 +124,15 @@ export class TaskFirebaseService {
     }
 
     const taskDoc = doc(this.firestore, 'users', user.uid, 'tasks', taskId);
-    return from(deleteDoc(taskDoc));
+    return from(deleteDoc(taskDoc)).pipe(
+      map(() => {
+        console.log(`Task ${taskId} deleted from Firebase`);
+        return void 0;
+      })
+    );
   }
 
+  
   clearAllTasks(): Observable<void> {
     const user = this.auth.currentUser;
     if (!user) {
@@ -113,18 +150,35 @@ export class TaskFirebaseService {
     );
   }
 
+  
+  private sendWebhookData(data: any): void {
+    console.log('Sending task webhook data:', data);
+    
+    this.http.post(this.webhookUrl, data).subscribe({
+      next: (response) => {
+        console.log(' Task webhook success:', response);
+      },
+      error: (error) => {
+        console.error(' Task webhook failed:', error);
+       
+      }
+    });
+  }
+
+  
   getTaskCount(): Observable<number> {
     return this.getUserTasks().pipe(
       map(tasks => tasks.length)
     );
   }
 
-  getCompletedTaskCount(): Observable<number> {
+    getCompletedTaskCount(): Observable<number> {
     return this.getUserTasks().pipe(
       map(tasks => tasks.filter(task => task.completed).length)
     );
   }
 
+  
   getPendingTaskCount(): Observable<number> {
     return this.getUserTasks().pipe(
       map(tasks => tasks.filter(task => !task.completed).length)
