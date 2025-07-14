@@ -14,7 +14,7 @@ import { Auth, User, signOut } from '@angular/fire/auth';
   styleUrl: './toolbar.css'
 })
 export class Toolbar {
-  @Output() menu = new EventEmitter<void>();
+  
    private activatedRoute = inject(ActivatedRoute);
   private router = inject(Router);
 

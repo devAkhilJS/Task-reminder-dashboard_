@@ -9,6 +9,8 @@
   transition: all 0.3s ease;
   position: relative;
   animation: fadeIn 0.3s ease-out;
+  max-width: 100%;
+  margin: 0 auto;
 }
 
 .task-item:hover {
@@ -131,6 +133,7 @@
   outline-offset: 2px;
 }
 
+/* Responsive Design */
 @media (max-width: 768px) {
   .task-item {
     padding: 16px;
@@ -138,6 +141,18 @@
   
   .task-title {
     font-size: 16px;
+  }
+  
+  .task-content {
+    gap: 12px;
+  }
+  
+  .task-date {
+    font-size: 13px;
+  }
+  
+  .date-value {
+    font-size: 11px;
   }
 }
 
@@ -157,10 +172,34 @@
     width: 100%;
     justify-content: flex-end;
   }
+  
+  .task-title {
+    font-size: 15px;
+  }
+  
+  .task-date {
+    font-size: 12px;
+    flex-wrap: wrap;
+  }
+  
+  .date-value {
+    font-size: 10px;
+  }
 }
 
+/* Print Styles */
 @media print {
   .task-actions {
     display: none;
+  }
+  
+  .task-item {
+    break-inside: avoid;
+    margin-bottom: 10px;
+  }
+  
+  .task-item:hover {
+    transform: none;
+    box-shadow: none;
   }
 }
