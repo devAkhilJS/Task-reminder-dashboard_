@@ -13,7 +13,7 @@ import { MatDialogModule } from '@angular/material/dialog';
 import { MatSnackBarModule } from '@angular/material/snack-bar';
 import { Layout } from './layout/layout';
 import { Toolbar } from './layout/toolbar/toolbar';
-import { Sidebar } from './sidebar/sidebar';
+
 import { TaskBoard } from './task-board/task-board';
 import { TaskList } from './task-board/task-list/task-list';
 import { TaskItem } from './task-board/task-list/task-item/task-item';
@@ -27,7 +27,7 @@ import { DashboardRoutingModule } from './dashboard-routing-module';
     
   ],
   imports: [
-    Layout,Toolbar,Sidebar, TaskBoard,
+    Layout,Toolbar, TaskBoard,
     MatToolbarModule,TaskList, TaskItem, AddTaskBar,
     CommonModule,
     DashboardRoutingModule,
