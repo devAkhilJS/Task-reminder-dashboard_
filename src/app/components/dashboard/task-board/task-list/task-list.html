@@ -1,0 +1,23 @@
+<section class="task-list-section">
+  <div class="task-list" *ngIf="tasks.length > 0; else noTasks">
+    <app-task-item 
+      *ngFor="let task of tasks; trackBy: trackByFn"
+      [task]="task"
+      (toggle)="onToggleTask($event)"
+      (delete)="onDeleteTask($event)">
+    </app-task-item>
+  </div>
+
+  <ng-template #noTasks>
+    <div class="no-tasks">
+      <div class="empty-icon">📋</div>
+      <h3>No tasks found!</h3>
+      <p *ngIf="title !== 'My Tasks'; else noTasksGeneral">
+        No tasks available for the selected time period.
+      </p>
+      <ng-template #noTasksGeneral>
+        <p>Add your first task below to get started.</p>
+      </ng-template>
+    </div>
+  </ng-template>
+</section>

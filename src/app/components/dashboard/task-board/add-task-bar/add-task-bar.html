@@ -1,0 +1,55 @@
+<section class="add-task-section">
+  <div class="add-task-form">
+    <h3 class="form-title">Add New Task</h3>
+    <div class="form-group">
+      <label for="taskTitle" class="form-label">Task Title *</label>
+      <input 
+        type="text" 
+        id="taskTitle"
+        [(ngModel)]="newTaskTitle"
+        (keyup.enter)="addTask()"
+        placeholder="Enter task title..."
+        class="form-input task-input"
+        maxlength="100"
+        required>
+      <small class="form-help" *ngIf="newTaskTitle.length > 90">
+        {{ 100 - newTaskTitle.length }} characters remaining
+      </small>
+    </div>
+    
+    <div class="form-group">
+      <label for="taskDate" class="form-label">Due Date</label>
+      <input 
+        type="date" 
+        id="taskDate"
+        [(ngModel)]="newTaskDate"
+        class="form-input date-input"
+        [min]="todayDate">
+    </div>
+    <div class="form-group">
+      <label for="taskCity" class="form-label">City</label>
+      <input 
+        type="text" 
+        id="taskCity"
+        [(ngModel)]="newTaskCity"
+        (keyup.enter)="addTask()"
+        placeholder="Enter city..."
+        class="form-input city-input"
+        maxlength="50">
+      <small class="form-help" *ngIf="newTaskCity.length > 40">
+        {{ 50 - newTaskCity.length }} characters remaining
+      </small>
+    </div>
+    
+    <div class="form-actions">
+      <button 
+        type="button"
+        (click)="addTask()" 
+        [disabled]="!newTaskTitle.trim()"
+        class="btn btn-primary add-btn">
+        <span class="btn-icon">➕</span>
+        <span class="btn-text">Add Task</span>
+      </button>
+    </div>
+  </div>
+</section>

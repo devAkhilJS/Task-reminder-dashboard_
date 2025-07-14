@@ -1,0 +1,22 @@
+<div class="profile">
+  <img src="assets/avatar.svg" />
+  <h3>{{ user?.displayName }}</h3>
+  <p>{{ user?.email }}</p>
+</div>
+
+
+<mat-nav-list>
+  <a mat-list-item routerLink="/dashboard/my-day">
+    <mat-icon matListIcon>light_mode</mat-icon> My day
+  </a>
+  <a mat-list-item routerLink="/dashboard/this-week">
+    <mat-icon matListIcon>view_week</mat-icon> This week
+  </a>
+  <a mat-list-item routerLink="/dashboard/this-month">
+    <mat-icon matListIcon>calendar_month</mat-icon> This month
+  </a>
+  <a mat-list-item routerLink="/dashboard/all">
+    <mat-icon matListIcon>list</mat-icon> All tasks
+  </a>
+</mat-nav-list>
+

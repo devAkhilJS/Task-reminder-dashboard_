@@ -1,0 +1,34 @@
+<div class="task-item" [class.completed]="task.completed">
+  
+  <div class="task-content">
+    <input 
+      type="checkbox" 
+      [checked]="task.completed"
+      (change)="onToggle()"
+      class="task-checkbox"
+      [id]="'task-' + task.id">
+    
+    <label [for]="'task-' + task.id" class="task-details">
+      <h3 class="task-title" [class.completed]="task.completed">
+        {{ task.title }}
+      </h3>
+      <p class="task-date">
+        <span class="date-label">Due:</span>
+        <span class="date-value">{{ task.dueDate | date:'MMM dd, yyyy' }}</span>
+      </p>
+      <p class="task-meta">
+        <span class="created-date">Created: {{ task.createdAt | date:'MMM dd, yyyy' }}</span>
+      </p>
+    </label>
+  </div>
+  
+  <div class="task-actions">
+    <button 
+      class="action-btn delete-btn" 
+      (click)="onDelete()"
+      [attr.aria-label]="'Delete task: ' + task.title"
+      title="Delete Task">
+      <span class="btn-icon">🗑️</span>
+    </button>
+  </div>
+</div>

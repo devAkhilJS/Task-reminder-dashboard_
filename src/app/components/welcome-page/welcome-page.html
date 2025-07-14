@@ -1,0 +1,14 @@
+<div class="d-flex justify-content-center align-items-center vh-100 flex-column text-center">
+  <img src="assets/tm.png" alt="Task Reminder Logo" style="width: 150px; height: 150px;" class="mb-4 mt-5">
+  
+  <h1 class="mb-3">Welcome to Easy Task.</h1>
+  <p class="mb-4">Please sign in or sign up to continue using the application.</p>
+
+  <div style="display: flex; gap: 1rem;">
+    <button mat-raised-button color="accent" [routerLink]="['/auth/sign-in']">Sign-In</button>
+    <button mat-raised-button color="primary" [routerLink]="['/auth/sign-up']">Sign-Up</button>
+    <a [routerLink]="['/auth/forgot-password']" class="text-primary">
+        Forgot Password
+    </a>
+  </div>
+</div>

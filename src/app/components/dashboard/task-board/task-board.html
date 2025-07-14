@@ -1,0 +1,80 @@
+<div class="task-board-container">
+  
+  <div class="header-section">
+    <h1 class="board-title">{{ title }}</h1>
+    
+    <div class="stats-container">
+      <div class="stat-card total">
+        <div class="stat-number">{{ getTotalCount() }}</div>
+        <div class="stat-label">Total Tasks</div>
+      </div>
+      <div class="stat-card pending">
+        <div class="stat-number">{{ getPendingCount() }}</div>
+        <div class="stat-label">Pending</div>
+      </div>
+      <div class="stat-card completed">
+        <div class="stat-number">{{ getCompletedCount() }}</div>
+        <div class="stat-label">Completed</div>
+      </div>
+      <div class="stat-card all-tasks">
+        <div class="stat-number">{{ getAllTasksCount() }}</div>
+        <div class="stat-label">All Tasks</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="filter-section">
+    <div class="filter-buttons">
+      <a routerLink="/tasks" class="filter-btn" [class.active]="currentPeriod === ''">
+        All Tasks
+      </a>
+      <a routerLink="/tasks/today" class="filter-btn" [class.active]="currentPeriod === 'today'">
+        Today
+      </a>
+      <a routerLink="/tasks/week" class="filter-btn" [class.active]="currentPeriod === 'week'">
+        This Week
+      </a>
+      <a routerLink="/tasks/month" class="filter-btn" [class.active]="currentPeriod === 'month'">
+        This Month
+      </a>
+    </div>
+    
+    <div class="action-buttons">
+      <button type="button" class="btn btn-danger" (click)="clearAllTasks()"
+              [disabled]="getAllTasksCount() === 0">
+        Clear All Tasks
+      </button>
+    </div>
+  </div>
+
+  <div class="add-task-section">
+    <app-add-task-bar (taskAdded)="onTaskAdded($event)"></app-add-task-bar>
+  </div>
+  <div class="task-list-section">
+    <ng-container *ngIf="tasks$ | async as tasks">
+      <div *ngIf="tasks.length === 0" class="empty-state">
+        <div class="empty-icon">📝</div>
+        <h3>No tasks found</h3>
+        <p *ngIf="currentPeriod === 'today'">You have no tasks for today.</p>
+        <p *ngIf="currentPeriod === 'week'">You have no tasks for this week.</p>
+        <p *ngIf="currentPeriod === 'month'">You have no tasks for this month.</p>
+        <p *ngIf="currentPeriod === '' || !currentPeriod">
+          Start by adding your first task above.
+        </p>
+      </div>
+      
+      <app-task-list 
+        *ngIf="tasks.length > 0"
+        [tasks]="tasks"
+        (toggleTask)="onToggleTask($event)"
+        (deleteTask)="onDeleteTask($event)">
+      </app-task-list>
+    </ng-container>
+  </div>
+
+  
+  <div *ngIf="!(tasks$ | async)" class="loading-state">
+    <div class="loading-spinner"></div>
+    <p>Loading tasks...</p>
+  </div>
+</div>
