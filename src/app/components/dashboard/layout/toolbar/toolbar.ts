@@ -5,6 +5,7 @@ import { MatMenuModule } from '@angular/material/menu';
 import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatDividerModule } from '@angular/material/divider';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { LocationInfo, LocationService } from '../../../../services/location.service';
@@ -21,6 +22,7 @@ import { Firestore, doc, updateDoc } from '@angular/fire/firestore';
     MatButtonModule,
     MatTooltipModule,
     MatProgressSpinnerModule,
+    MatDividerModule,
     CommonModule
   ],
   templateUrl: './toolbar.html',
