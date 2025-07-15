@@ -16,7 +16,7 @@ import {
 import { HttpClient } from '@angular/common/http'; 
 import { Task } from '../components/dashboard/task-board/task-interface';
 import { LocationInfo, LocationService } from './location.service';
-import { Observable, from, map } from 'rxjs';
+import { Observable, from, map, switchMap, catchError, of, firstValueFrom } from 'rxjs';
 
 @Injectable({
   providedIn: 'root'
@@ -27,10 +27,8 @@ export class TaskFirebaseService {
   private http = inject(HttpClient); 
   private locationService = inject(LocationService);
 
-  
   private webhookUrl = 'https://pleasant-macaw-deadly.ngrok-free.app/webhook-test/8f6008b3-6540-4045-986d-2014bdbbf594';
 
-  
   getUserTasks(): Observable<Task[]> {
     const user = this.auth.currentUser;
     if (!user) {
@@ -56,7 +54,6 @@ export class TaskFirebaseService {
     );
   }
 
- 
   addTask(task: Omit<Task, 'id'>): Observable<string> {
     const user = this.auth.currentUser;
     if (!user) {
@@ -64,7 +61,6 @@ export class TaskFirebaseService {
     }
 
     const tasksCollection = collection(this.firestore, 'users', user.uid, 'tasks');
-    
     
     const taskData = {
       ...task,
@@ -74,9 +70,9 @@ export class TaskFirebaseService {
     };
 
     return from(addDoc(tasksCollection, taskData)).pipe(
-      map(docRef => {
-        // Send webhook data with location info
-        this.sendWebhookDataWithLocation({
+      switchMap(docRef => {
+        
+        const webhookData = {
           userEmail: user.email,
           userUid: user.uid,
           taskId: docRef.id,
@@ -87,14 +83,18 @@ export class TaskFirebaseService {
           taskCompleted: task.completed,
           taskcity: task.city,
           timestamp: new Date().toISOString()
-        });
-        
-        return docRef.id;
+        };
+
+        return this.sendWebhookDataWithLocation(webhookData).pipe(
+          map(() => docRef.id),
+          catchError(error => {
+            console.error('Webhook failed, but task was created:', error);
+            return of(docRef.id);           })
+        );
       })
     );
   }
 
-  
   updateTask(taskId: string, updates: Partial<Task>): Observable<void> {
     const user = this.auth.currentUser;
     if (!user) {
@@ -103,7 +103,7 @@ export class TaskFirebaseService {
 
     const taskDoc = doc(this.firestore, 'users', user.uid, 'tasks', taskId);
     
-        const updateData: any = { ...updates };
+    const updateData: any = { ...updates };
     if (updates.dueDate) {
       updateData.dueDate = Timestamp.fromDate(updates.dueDate);
     }
@@ -119,7 +119,6 @@ export class TaskFirebaseService {
     );
   }
 
-  
   deleteTask(taskId: string): Observable<void> {
     const user = this.auth.currentUser;
     if (!user) {
@@ -135,7 +134,6 @@ export class TaskFirebaseService {
     );
   }
 
-  
   clearAllTasks(): Observable<void> {
     const user = this.auth.currentUser;
     if (!user) {
@@ -143,105 +141,121 @@ export class TaskFirebaseService {
     }
 
     return this.getUserTasks().pipe(
-      map(tasks => {
+      switchMap(tasks => {
         const deletePromises = tasks.map(task => 
           deleteDoc(doc(this.firestore, 'users', user.uid, 'tasks', task.id))
         );
-        return Promise.all(deletePromises);
+        return from(Promise.all(deletePromises));
       }),
       map(() => void 0)
     );
   }
 
-  
-  private async sendWebhookDataWithLocation(taskData: any): Promise<void> {
+  private sendWebhookDataWithLocation(taskData: any): Observable<void> {
     const user = this.auth.currentUser;
-    if (!user) return;
-
-    try {
-      // Get current location from LocationService
-      let currentLocation: LocationInfo | null = null;
-      
-      // Try to get location from LocationService first
-      this.locationService.location$.subscribe(location => {
-        if (location) {
-          currentLocation = location;
-        }
-      });
-
-      if (!currentLocation) {
-        try {
-          const userDoc = doc(this.firestore, 'users', user.uid);
-          const userSnapshot = await getDoc(userDoc);
-          if (userSnapshot.exists()) {
-            const userData = userSnapshot.data();
-            if (userData['location']) {
-              currentLocation = userData['location'];
-            }
-          }
-        } catch (error) {
-          console.error('Error getting user location from Firebase:', error);
-        }
-      }
-
-      if (!currentLocation) {
-        try {
-          this.locationService.getLocation().subscribe(location => {
-            if (location) {
-              currentLocation = location;
-            }
-          });
-        } catch (error) {
-          console.error('Error getting fresh location:', error);
-        }
-      }
-
-      const webhookData = {
-        ...taskData,
-        location: currentLocation ? {
-          latitude: currentLocation.latitude,
-          longitude: currentLocation.longitude,
-          placeName: currentLocation.placeName,
-          city: currentLocation.city,
-          state: currentLocation.state,
-          country: currentLocation.country,
-          locationTimestamp: new Date().toISOString()
-        } : {
-          message: 'Location not available',
-          locationTimestamp: new Date().toISOString()
-        }
-      };
-
-      console.log('Sending task webhook data with location:', webhookData);
-      
-      this.http.post(this.webhookUrl, webhookData).subscribe({
-        next: (response) => {
-          console.log('Task webhook success:', response);
-        },
-        error: (error) => {
-          console.error('Task webhook failed:', error);
-        }
-      });
-
-    } catch (error) {
-      console.error('Error in sendWebhookDataWithLocation:', error);
+    if (!user) {
+      return of(void 0);
     }
+
+    return this.getCurrentLocation().pipe(
+      switchMap(currentLocation => {
+        const webhookData = {
+          ...taskData,
+          location: currentLocation ? {
+            latitude: currentLocation.latitude,
+            longitude: currentLocation.longitude,
+            placeName: currentLocation.placeName,
+            city: currentLocation.city,
+            state: currentLocation.state,
+            country: currentLocation.country,
+            locationTimestamp: new Date().toISOString()
+          } : {
+            message: 'Location not available',
+            locationTimestamp: new Date().toISOString()
+          }
+        };
+
+        console.log('Sending task webhook data with location:', webhookData);
+        
+        return this.http.post(this.webhookUrl, webhookData).pipe(
+          map(() => {
+            console.log('Task webhook success');
+            return void 0;
+          }),
+          catchError(error => {
+            console.error('Task webhook failed:', error);
+            return of(void 0); 
+          })
+        );
+      })
+    );
   }
 
-  
+  private getCurrentLocation(): Observable<LocationInfo | null> {
+    return new Observable(observer => {
+      const user = this.auth.currentUser;
+      if (!user) {
+        observer.next(null);
+        observer.complete();
+        return;
+      }
+
+     
+      this.locationService.getLocation().subscribe({
+        next: (location) => {
+          console.log('Got location from LocationService:', location);
+          observer.next(location);
+          observer.complete();
+        },
+        error: (error) => {
+          console.error('Error getting location from LocationService:', error);
+          
+          
+          this.getLocationFromFirebase(user.uid).subscribe({
+            next: (firebaseLocation) => {
+              observer.next(firebaseLocation);
+              observer.complete();
+            },
+            error: (firebaseError) => {
+              console.error('Error getting location from Firebase:', firebaseError);
+              observer.next(null);
+              observer.complete();
+            }
+          });
+        }
+      });
+    });
+  }
+
+  private getLocationFromFirebase(uid: string): Observable<LocationInfo | null> {
+    const userDoc = doc(this.firestore, 'users', uid);
+    return from(getDoc(userDoc)).pipe(
+      map(userSnapshot => {
+        if (userSnapshot.exists()) {
+          const userData = userSnapshot.data();
+          return userData['location'] || null;
+        }
+        return null;
+      }),
+      catchError(error => {
+        console.error('Error getting user location from Firebase:', error);
+        return of(null);
+      })
+    );
+  }
+
   getTaskCount(): Observable<number> {
     return this.getUserTasks().pipe(
       map(tasks => tasks.length)
     );
   }
 
-    getCompletedTaskCount(): Observable<number> {
+  getCompletedTaskCount(): Observable<number> {
     return this.getUserTasks().pipe(
       map(tasks => tasks.filter(task => task.completed).length)
     );
   }
 
-  
   getPendingTaskCount(): Observable<number> {
     return this.getUserTasks().pipe(
       map(tasks => tasks.filter(task => !task.completed).length)
