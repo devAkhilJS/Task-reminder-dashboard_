@@ -44,28 +44,41 @@ export class Toolbar implements OnInit {
   }
 
   ngOnInit() {
-    // Subscribe to location changes
     this.locationService.location$.subscribe(
       (locationInfo: LocationInfo) => {
         this.currentLocation = locationInfo;
         this.locationDisplay = `${locationInfo.city}, ${locationInfo.state}`;
+        this.isLocationLoading = false;
       }
     );
 
-    // Get initial location
     this.getCurrentLocation();
   }
 
   getCurrentLocation() {
     this.isLocationLoading = true;
+    
+    const loadingTimeout = setTimeout(() => {
+      if (this.isLocationLoading) {
+        this.isLocationLoading = false;
+        if (!this.currentLocation) {
+          this.locationDisplay = 'Location service timed out';
+        }
+      }
+    }, 15000);
+    
     this.locationService.getLocation().subscribe(
       (locationInfo: LocationInfo) => {
+        clearTimeout(loadingTimeout);
+        
         this.currentLocation = locationInfo;
         this.locationDisplay = `${locationInfo.city}, ${locationInfo.state}`;
         this.locationService.setLocation(locationInfo);
         this.isLocationLoading = false;
       },
       (error) => {
+        clearTimeout(loadingTimeout);
+        
         this.locationDisplay = 'Unable to retrieve location';
         this.isLocationLoading = false;
         console.error('Location error:', error);
@@ -76,23 +89,38 @@ export class Toolbar implements OnInit {
   async onChangeLocation() {
     this.isLocationLoading = true;
     
+    const loadingTimeout = setTimeout(() => {
+      if (this.isLocationLoading) {
+        this.isLocationLoading = false;
+        console.log('Location update timed out');
+      }
+    }, 15000);
+    
     this.locationService.getLocation().subscribe(
       async (locationInfo: LocationInfo) => {
         this.currentLocation = locationInfo;
         this.locationDisplay = `${locationInfo.city}, ${locationInfo.state}`;
         this.locationService.setLocation(locationInfo);
         
-        // Update location in Firebase
-        await this.updateLocationInFirebase(locationInfo);
-        
-        this.isLocationLoading = false;
-        // Better user feedback than alert
-        console.log(`Location updated: ${locationInfo.placeName}`);
+        try {
+          const updateSuccess = await this.updateLocationInFirebase(locationInfo);
+          
+          if (updateSuccess) {
+            console.log(`Location updated in Firebase: ${locationInfo.placeName}`);
+          } else {
+            console.warn('Firebase update was not successful after retries');
+          }
+        } catch (error) {
+          console.error('Firebase update error:', error);
+        } finally {
+          clearTimeout(loadingTimeout);
+          this.isLocationLoading = false;
+        }
       },
       (error) => {
+        clearTimeout(loadingTimeout);
         this.isLocationLoading = false;
         console.error('Location update error:', error);
-        // You could show a toast notification here instead of alert
       }
     );
   }
@@ -101,22 +129,49 @@ export class Toolbar implements OnInit {
     if (this.user && this.user.uid) {
       try {
         const userDocRef = doc(this.firestore, 'users', this.user.uid);
-        await updateDoc(userDocRef, {
-          location: {
-            latitude: locationInfo.latitude,
-            longitude: locationInfo.longitude,
-            placeName: locationInfo.placeName,
-            city: locationInfo.city,
-            state: locationInfo.state,
-            country: locationInfo.country,
-            lastUpdated: new Date()
+        
+        const locationData = {
+          latitude: locationInfo.latitude,
+          longitude: locationInfo.longitude,
+          placeName: locationInfo.placeName || '',
+          city: locationInfo.city || '',
+          state: locationInfo.state || '',
+          country: locationInfo.country || '',
+          lastUpdated: new Date().toISOString()
+        };
+        
+        let retryCount = 0;
+        const maxRetries = 3;
+        const baseDelay = 1000;
+        
+        const updateWithRetry = async () => {
+          try {
+            await updateDoc(userDocRef, { location: locationData });
+            console.log('Location updated in Firebase successfully');
+            return true;
+          } catch (err) {
+            retryCount++;
+            console.error(`Firebase update attempt ${retryCount} failed:`, err);
+            
+            if (retryCount < maxRetries) {
+              const delay = baseDelay * Math.pow(2, retryCount - 1) * (0.5 + Math.random() * 0.5);
+              console.log(`Retrying in ${delay}ms...`);
+              await new Promise(resolve => setTimeout(resolve, delay));
+              return updateWithRetry();
+            } else {
+              console.error('Max retries reached. Firebase update failed.');
+              return false;
+            }
           }
-        });
-        console.log('Location updated in Firebase successfully');
+        };
+        
+        return updateWithRetry();
       } catch (error) {
         console.error('Error updating location in Firebase:', error);
+        return false;
       }
     }
+    return false;
   }
 
   onSignOut() {

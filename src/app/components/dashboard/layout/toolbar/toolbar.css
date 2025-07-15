@@ -25,6 +25,13 @@
   white-space: nowrap;
 }
 
+.location-hint {
+  margin-left: 4px;
+  font-size: 0.75em;
+  opacity: 0.8;
+  font-style: italic;
+}
+
 .location-spinner {
   margin-right: 8px;
 }
