@@ -1,89 +1,90 @@
-
-mat-toolbar {
-  position: sticky;
-  top: 0;
-  z-index: 1000;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-.title {
-  font-size: 1.25rem;
-  font-weight: 500;
-  margin-left: 16px;
-}
-
 .spacer {
   flex: 1 1 auto;
 }
 
-button[mat-icon-button] {
-  margin: 0 4px;
+.title {
+  font-size: 1.2em;
+  font-weight: 500;
 }
 
-button[mat-icon-button]:first-child {
-  margin-left: 0;
-}
-
-button[mat-icon-button]:last-child {
-  margin-right: 0;
-}
-
-h1 {
-  margin: 20px 16px;
-  font-size: 1.5rem;
-  font-weight: 400;
-  color: #424242;
-}
-
-mat-menu {
-  margin-top: 8px;
-}
-
-mat-menu button[mat-raised-button] {
-  width: 100%;
-  margin: 8px 0;
-  background-color: #f44336;
-  color: white;
-}
-
-mat-menu button[mat-raised-button]:hover {
-  background-color: #d32f2f;
-}
-
-@media (max-width: 768px) {
-  .title {
-    font-size: 1.1rem;
-    margin-left: 8px;
-  }
-  
-  h1 {
-    font-size: 1.25rem;
-    margin: 16px 12px;
-  }
-}
-
-mat-icon {
-  font-size: 24px;
-  width: 24px;
-  height: 24px;
-}
-
-mat-toolbar {
+.location-info {
   display: flex;
   align-items: center;
-  min-height: 64px;
-  padding: 0 16px;
-}
-
-button[mat-icon-button]:focus {
-  outline: 2px solid #fff;
-  outline-offset: 2px;
-}
-
-button[mat-icon-button] {
-  transition: background-color 0.2s ease;
-}
-
-button[mat-icon-button]:hover {
+  margin-right: 16px;
+  padding: 4px 8px;
   background-color: rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  font-size: 0.9em;
+}
+
+.location-text {
+  margin-left: 4px;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.location-spinner {
+  margin-right: 8px;
+}
+
+.user-info {
+  padding: 8px 16px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.12);
+}
+
+.user-info p {
+  margin: 4px 0;
+  font-size: 0.9em;
+}
+
+.user-email {
+  color: rgba(0, 0, 0, 0.6);
+  font-size: 0.8em !important;
+}
+
+.welcome-section {
+  padding: 16px 24px;
+  background-color: #f5f5f5;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.welcome-section h1 {
+  margin: 0 0 8px 0;
+  font-size: 1.5em;
+  font-weight: 400;
+  color: #333;
+}
+
+.current-location {
+  display: flex;
+  align-items: center;
+  margin: 8px 0 0 0;
+  color: #666;
+  font-size: 0.9em;
+}
+
+.current-location mat-icon {
+  margin-right: 8px;
+  font-size: 1.2em;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .location-info {
+    display: none;
+  }
+  
+  .location-text {
+    max-width: 120px;
+  }
+  
+  .welcome-section {
+    padding: 12px 16px;
+  }
+  
+  .welcome-section h1 {
+    font-size: 1.3em;
+  }
 }

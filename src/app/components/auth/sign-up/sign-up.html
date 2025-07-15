@@ -1,55 +1,68 @@
 <div class="d-flex justify-content-center align-items-center vh-100">
   <div style="width: 320px;" class="text-center">
-
-    <img 
-      src="assets/tm.png" 
-      alt="Task Reminder Logo" 
-      style="width: 150px; height: 150px;" 
-      class="mx-auto d-block mb-4 mt-3"
-    >
-
+    
+    <img src="assets/tm.png" alt="Task Reminder Logo"
+         style="width: 150px; height: 150px;"
+         class="mx-auto d-block mb-4 mt-3">
+    
     <h1 class="mb-2">Welcome to Easy Task</h1>
     <p class="mb-4">Please sign up to continue using the application.</p>
-
+    
     <form [formGroup]="authForm" (ngSubmit)="onSubmit()">
-
-      <mat-form-field appearance="outline" class="w-100 mb-3">
-        <mat-label>Email / Username</mat-label>
+      
+      <mat-form-field appearance="outline" class="w-100 mb-2" color="primary">
+        <mat-label>Email/Username</mat-label>
         <input matInput formControlName="email">
+        <mat-error *ngIf="authForm.get('email')?.hasError('required')">
+          Email is required.
+        </mat-error>
+        <mat-error *ngIf="authForm.get('email')?.hasError('email')">
+          Invalid email format.
+        </mat-error>
       </mat-form-field>
-
-      <mat-form-field appearance="outline" class="w-100 mb-3">
+      
+      <mat-form-field appearance="outline" class="w-100 mb-2" color="primary">
         <mat-label>Password</mat-label>
         <input matInput type="password" formControlName="password">
+        <mat-error *ngIf="authForm.get('password')?.hasError('required')">
+          Password is required.
+        </mat-error>
       </mat-form-field>
-
+      
       <div *ngIf="errorMessage" class="alert alert-danger d-flex align-items-center p-2 mb-2">
         <mat-icon color="warn">error</mat-icon>
         <span class="ms-2">{{ errorMessage }}</span>
       </div>
-
-      <div *ngIf="isSubmissionInProgress" class="d-flex align-items-center justify-content-center mb-2">
+      
+      <div class="d-flex align-items-center justify-content-center mb-2">
+        <mat-icon>location_on</mat-icon>
+        <span class="ms-2">{{ locationDisplay }}</span>
+      </div>
+      
+      <div class="d-flex align-items-center justify-content-center mb-2" *ngIf="isSubmissionInProgress">
         <mat-spinner [diameter]="22" class="me-2"></mat-spinner>
         <span>Signing up...</span>
       </div>
-
+      
       <button type="submit" mat-raised-button color="primary" class="w-100 mb-3 auth-button">
         Sign-Up
       </button>
     </form>
-
-    <button mat-raised-button color="warn" class="w-100 mb-3 auth-button" (click)="onSignInWithGoogle()">
+    
+    <button mat-raised-button class="w-100 mb-3 auth-button" (click)="onSignInWithGoogle()">
       Sign-Up with Google
     </button>
-
+    
     <p class="mb-1">Already have an account?</p>
-    <button mat-raised-button color="accent" [routerLink]="['/auth/sign-in']" class="w-100 auth-button mb-2">
+    <button mat-raised-button color="accent"
+            [routerLink]="['/auth/sign-in']"
+            class="w-100 auth-button mb-2">
       Sign-In
     </button>
-
-    <a [routerLink]="['/auth/forgot-password']" class="text-primary">
+    
+    <a [routerLink]="['/auth/forgot-password']" class="text-primary d-block">
       Forgot Password?
     </a>
-
+    
   </div>
 </div>

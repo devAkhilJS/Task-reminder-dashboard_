@@ -1,18 +1,55 @@
 <mat-toolbar color="primary">
-  
-  <span class="title">Task Reminder</span>
+  <span class="title">Task Reminder</span>
   <span class="spacer"></span>
-  <button mat-icon-button [matMenuTriggerFor]="userMenu">
-      <mat-icon>account_circle</mat-icon>
+  
+  <!-- Location Display -->
+  <div class="location-info" *ngIf="!isLocationLoading">
+    <mat-icon>location_on</mat-icon>
+    <span class="location-text">{{ locationDisplay }}</span>
+  </div>
+  
+  <!-- Location Loading -->
+  <div class="location-info" *ngIf="isLocationLoading">
+    <mat-spinner [diameter]="20" class="location-spinner"></mat-spinner>
+    <span class="location-text">Updating...</span>
+  </div>
+  
+  <!-- Location Update Button -->
+  <button 
+    mat-icon-button 
+    (click)="onChangeLocation()" 
+    [disabled]="isLocationLoading"
+    matTooltip="Update Location"
+    matTooltipPosition="below">
+    <mat-icon>refresh</mat-icon>
+  </button>
+  
+  <!-- User Menu -->
+  <button 
+    mat-icon-button 
+    [matMenuTriggerFor]="userMenu"
+    matTooltip="User Menu"
+    matTooltipPosition="below">
+    <mat-icon>account_circle</mat-icon>
   </button>
 </mat-toolbar>
 
 <mat-menu #userMenu="matMenu">
-  <button mat-raised-button (click)="onSignOut()">
-    Sign-out
-</button>
-
+  <div class="user-info">
+    <p><strong>{{ user.displayName || user.email || 'Guest' }}</strong></p>
+    <p class="user-email" *ngIf="user.displayName">{{ user.email }}</p>
+  </div>
+  <mat-divider></mat-divider>
+  <button mat-menu-item (click)="onSignOut()">
+    <mat-icon>logout</mat-icon>
+    <span>Sign Out</span>
+  </button>
 </mat-menu>
-<h1>
-    welcome, {{ user.displayName || user.email || 'Guest' }}
-</h1>
+
+<div class="welcome-section">
+  <h1>Welcome, {{ user.displayName || user.email || 'Guest' }}!</h1>
+  <p class="current-location" *ngIf="currentLocation">
+    <mat-icon>place</mat-icon>
+    Current Location: {{ currentLocation.placeName }}
+  </p>
+</div>
