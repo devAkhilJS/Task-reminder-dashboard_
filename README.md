@@ -51,24 +51,41 @@ Follow these instructions to get a copy of the project up and running on your lo
     *   Enable **Cloud Firestore** and choose a location.
     *   **Configure Firestore Security Rules:** Ensure your rules allow authenticated users to read, create, update, and delete their own tasks. Based on our previous discussion, your rules should look something like this:
         ```firestore
-        rules_version = '2';
-        service cloud.firestore {
-          match /databases/{database}/documents {
-            match /users/{userId}/tasks/{taskId} {
-              allow read: if request.auth != null && request.auth.uid == userId;
-              allow create, update: if request.auth != null &&
-                                      request.auth.uid == userId &&
-                                      request.resource.data.userId == userId;
-              allow delete: if request.auth != null && request.auth.uid == userId;
-            }
-            match /users/{userId} {
-              allow read, write: if request.auth != null && request.auth.uid == userId;
-            }
-            match /{document=**} {
-              allow read, write: if false;
-            }
-          }
-        }
+       rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Users collection rules
+    match /users/{userId} {
+      // User can only access their own document
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+      
+      // Tasks subcollection rules
+      match /tasks/{taskId} {
+        // User can only access their own tasks
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+        
+        // Additional validation for task creation/updates
+        allow create: if request.auth != null 
+          && request.auth.uid == userId
+          && request.resource.data.userId == request.auth.uid;
+        
+        allow update: if request.auth != null 
+          && request.auth.uid == userId
+          && resource.data.userId == request.auth.uid;
+        
+        allow delete: if request.auth != null 
+          && request.auth.uid == userId
+          && resource.data.userId == request.auth.uid;
+      }
+    }
+    
+    // Deny access to all other documents
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
         o run the development server:
 
 ```
