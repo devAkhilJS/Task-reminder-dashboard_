@@ -10,11 +10,11 @@ const routes: Routes = [
     path: '',
     component: Layout,
      children: [
-      { path: 'my-day',   component: TaskBoard, data: { filter: 'day' } },
-      { path: 'this-week', component: TaskBoard, data: { filter: 'week' } },
-      { path: 'this-month', component: TaskBoard, data: { filter: 'month' } },
+      { path: 'today',   component: TaskBoard, data: { filter: 'today' } },
+      { path: 'week', component: TaskBoard, data: { filter: 'week' } },
+      { path: 'month', component: TaskBoard, data: { filter: 'month' } },
       { path: 'all', component: TaskBoard, data: { filter: 'all' } },
-      { path: '', redirectTo: 'my-day', pathMatch: 'full' }
+      { path: '', redirectTo: 'today', pathMatch: 'full' }
     ]
   }
 ];
