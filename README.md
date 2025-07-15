@@ -52,8 +52,8 @@ Follow these instructions to get a copy of the project up and running on your lo
     *   **Configure Firestore Security Rules:** Ensure your rules allow authenticated users to read, create, update, and delete their own tasks. Based on our previous discussion, your rules should look something like this:
         ```firestore
        rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
+         service cloud.firestore {
+          match /databases/{database}/documents {
     
     // Users collection rules
     match /users/{userId} {
