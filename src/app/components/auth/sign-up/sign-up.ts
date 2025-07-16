@@ -89,13 +89,11 @@ export class SignUp {
             state: this.currentLocation.state,
             country: this.currentLocation.country,
             lastUpdated: new Date()
-          },
-          email: this.authForm.value.email,
-          createdAt: new Date(),
-        });
-        console.log('User data with location stored successfully');
+          }
+        }, { merge: true }); // This will create the doc if it doesn't exist
+        console.log('Location stored successfully');
       } catch (error) {
-        console.error('Error storing user data:', error);
+        console.error('Error storing location:', error);
       }
     }
   }

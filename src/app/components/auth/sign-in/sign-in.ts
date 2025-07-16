@@ -80,7 +80,7 @@ export class SignIn {
     if (this.currentLocation) {
       try {
         const userDocRef = doc(this.firestore, 'users', userId);
-        await updateDoc(userDocRef, {
+        await setDoc(userDocRef, {
           location: {
             latitude: this.currentLocation.latitude,
             longitude: this.currentLocation.longitude,
@@ -90,7 +90,7 @@ export class SignIn {
             country: this.currentLocation.country,
             lastUpdated: new Date()
           }
-        });
+        }, { merge: true }); // This will create the doc if it doesn't exist
         console.log('Location stored successfully');
       } catch (error) {
         console.error('Error storing location:', error);
