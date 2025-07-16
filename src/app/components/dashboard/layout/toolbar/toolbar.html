@@ -22,6 +22,25 @@
   
   <button 
     mat-icon-button 
+    (click)="toggleLocationInput()" 
+    [disabled]="isLocationLoading"
+    matTooltip="Set Location Manually"
+    matTooltipPosition="below">
+    <mat-icon>edit_location_alt</mat-icon>
+  </button>
+<div *ngIf="showLocationInput" class="location-search-bar">
+  <input
+    [(ngModel)]="locationInput"
+    (keydown.enter)="onManualLocationSet()"
+    placeholder="Enter city name..."
+    autofocus
+  />
+  <button mat-button (click)="onManualLocationSet()">Set</button>
+  <button mat-button (click)="toggleLocationInput()">Cancel</button>
+</div>
+  
+  <button 
+    mat-icon-button 
     [matMenuTriggerFor]="userMenu"
     matTooltip="User Menu"
     matTooltipPosition="below">

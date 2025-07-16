@@ -11,6 +11,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { LocationInfo, LocationService } from '../../../../services/location.service';
 import { Auth, User, signOut } from '@angular/fire/auth';
 import { Firestore, doc, updateDoc } from '@angular/fire/firestore';
+import { FormsModule } from '@angular/forms';
 
 @Component({
   selector: 'app-toolbar',
@@ -23,7 +24,8 @@ import { Firestore, doc, updateDoc } from '@angular/fire/firestore';
     MatTooltipModule,
     MatProgressSpinnerModule,
     MatDividerModule,
-    CommonModule
+    CommonModule,
+    FormsModule
   ],
   templateUrl: './toolbar.html',
   styleUrls: ['./toolbar.css'],
@@ -38,6 +40,8 @@ export class Toolbar implements OnInit {
   currentLocation: LocationInfo | null = null;
   locationDisplay: string = 'Unknown Location';
   isLocationLoading: boolean = false;
+  showLocationInput = false;
+  locationInput = '';
 
   constructor(private locationService: LocationService) {
     console.log('logged in user', this.user);
@@ -179,6 +183,29 @@ export class Toolbar implements OnInit {
       this.router.navigate(['/auth/sign-in']);
     }).catch((error) => {
       console.error('Sign-out error:', error);
+    });
+  }
+
+  toggleLocationInput() {
+    this.showLocationInput = !this.showLocationInput;
+    if (this.showLocationInput) {
+      this.locationInput = '';
+    }
+  }
+  onManualLocationSet() {
+    if (!this.locationInput.trim()) return;
+    this.isLocationLoading = true;
+    this.locationService.setLocationByCityName(this.locationInput.trim()).subscribe({
+      next: (locationInfo) => {
+        this.currentLocation = locationInfo;
+        this.locationDisplay = `${locationInfo.city}, ${locationInfo.state}`;
+        this.isLocationLoading = false;
+        this.showLocationInput = false;
+      },
+      error: (err) => {
+        alert('City not found!');
+        this.isLocationLoading = false;
+      }
     });
   }
 }

@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { Observable, Subject, of, throwError, timer } from 'rxjs';
 import { HttpClient } from '@angular/common/http';
-import { catchError, timeout } from 'rxjs/operators';
+import { catchError, timeout, map } from 'rxjs/operators';
 
 export interface LocationInfo {
   latitude: number;
@@ -141,6 +141,28 @@ export class LocationService {
     }
     this.locationSubject.next(location);
     this.cacheLocation(location);
+  }
+
+  setLocationByCityName(city: string): Observable<LocationInfo> {
+    const url = `https://nominatim.openstreetmap.org/search?city=${encodeURIComponent(city)}&format=json&limit=1&addressdetails=1`;
+    return this.http.get<any[]>(url).pipe(
+      map(results => {
+        if (!results || results.length === 0) throw new Error('City not found');
+        const loc = results[0];
+        const address = loc.address || {};
+        const locationInfo: LocationInfo = {
+          latitude: parseFloat(loc.lat),
+          longitude: parseFloat(loc.lon),
+          placeName: loc.display_name,
+          city: address.city || address.town || address.village || city,
+          state: address.state || '',
+          country: address.country || '',
+          timestamp: Date.now()
+        };
+        this.setLocation(locationInfo); // update app state
+        return locationInfo;
+      })
+    );
   }
   
   private cacheLocation(location: LocationInfo) {
