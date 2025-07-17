@@ -18,6 +18,7 @@ import { Task } from '../components/dashboard/task-board/task-interface';
 import { LocationInfo, LocationService } from './location.service';
 import { Observable, from, map, switchMap, catchError, of, firstValueFrom, filter, take } from 'rxjs';
 
+import { throwError } from 'rxjs';
 @Injectable({
 providedIn: 'root'
 })
@@ -120,29 +121,29 @@ deleteTask(taskId: string): Observable<void> {
   return this.getUser$().pipe(
     switchMap(user => {
       if (!taskId || taskId.trim() === '') {
-        throw new Error('Invalid task ID provided');
+        return throwError(() => new Error('Invalid task ID provided'));
       }
       const taskDoc = doc(this.firestore, 'users', user!.uid, 'tasks', taskId);
       console.log('Attempting to delete task:', {
         userId: user!.uid,
         taskId: taskId,
-        fullPath: `users/${user!.uid}/tasks/${taskId}`
+        fullPath: `users/${user!.uid}/tasks/${taskId}`,
       });
       return from(getDoc(taskDoc)).pipe(
         switchMap(docSnapshot => {
           if (!docSnapshot.exists()) {
-            console.warn(`Task ${taskId} not found for user ${user!.uid}`);
-            return of(void 0);
+            const warning = `Task with ID '${taskId}' not found. It may have already been deleted.`;
+            console.warn(warning);
+            return throwError(() => new Error(warning));
           }
           console.log('Document exists, proceeding with deletion');
           return from(deleteDoc(taskDoc));
         }),
         map(() => {
-          console.log(`Task ${taskId} deleted successfully from Firebase`);
-          return void 0;
+          console.log(`Task '${taskId}' deleted successfully from Firebase.`);
         }),
         catchError(error => {
-          console.error('Error deleting task:', {
+          console.error(`Error deleting task ${taskId} for user ${user!.uid}:`, {
             error,
             userId: user!.uid,
             taskId: taskId,

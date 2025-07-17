@@ -1,285 +1,289 @@
+// src/app/components/dashboard/task-board/task-board.component.ts
+
 import { Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, RouterModule } from '@angular/router';
-import { BehaviorSubject, Observable, Subscription, finalize, switchMap, filter, take } from 'rxjs';
-import { Auth, authState } from '@angular/fire/auth'; // Import authState
+import { BehaviorSubject, Observable, Subscription, filter, finalize, take } from 'rxjs';
+import { Auth, authState } from '@angular/fire/auth';
 import { Task } from './task-interface';
 import { TaskList } from './task-list/task-list';
 import { AddTaskBar } from './add-task-bar/add-task-bar';
 import { TaskFirebaseService } from '../../../services/task-firebase.service';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 
 @Component({
-selector: 'app-task-board',
-standalone: true,
-imports: [CommonModule, RouterModule, TaskList, AddTaskBar],
-templateUrl: './task-board.html',
-styleUrl: './task-board.css'
+  selector: 'app-task-board',
+  standalone: true,
+  imports: [CommonModule, RouterModule, TaskList, AddTaskBar, MatSnackBarModule],
+  templateUrl: './task-board.html',
+  styleUrl: './task-board.css'
 })
 export class TaskBoard implements OnInit, OnDestroy {
-title: string = 'My Tasks';
+  public title: string = 'My Tasks';
 
-private auth = inject(Auth);
-private taskService = inject(TaskFirebaseService);
+  private auth = inject(Auth);
+  private taskService = inject(TaskFirebaseService);
+  private snackBar = inject(MatSnackBar);
+  private route = inject(ActivatedRoute);
 
-private allTasksSubject = new BehaviorSubject<Task[]>([]);
-private filteredTasksSubject = new BehaviorSubject<Task[]>([]);
-tasks$: Observable<Task[]> = this.filteredTasksSubject.asObservable();
+  private allTasksSubject = new BehaviorSubject<Task[]>([]);
+  private filteredTasksSubject = new BehaviorSubject<Task[]>([]);
+  public tasks$: Observable<Task[]> = this.filteredTasksSubject.asObservable();
 
-currentPeriod: string = '';
-isLoading = false;
-private subscriptions: Subscription[] = [];
+  
+  private deletingTasks = new Set<string>();
+  private togglingTasks = new Set<string>();
 
-constructor(private route: ActivatedRoute) {}
+  public currentPeriod: string = '';
+  public isLoading = false;
+  private subscriptions: Subscription[] = [];
 
-ngOnInit() {
-this.waitForAuthThenLoadTasks();
+  constructor() {}
 
-const routeSubscription = this.route.params.subscribe(params => {
-const period = params['period'] || '';
-this.currentPeriod = period;
-this.filterTasks(period);
-});
+  public ngOnInit(): void {
+    this.waitForAuthThenLoadTasks();
 
-const routeDataSubscription = this.route.data.subscribe(data => {
-if (data['filter']) {
-this.currentPeriod = data['filter'];
-this.filterTasks(data['filter']);
-}
-});
+    const routeSubscription = this.route.params.subscribe(params => {
+      const period = params['period'] || 'all';
+      this.currentPeriod = period;
+      this.filterTasks(period);
+    });
 
-this.subscriptions.push(routeSubscription);
-this.subscriptions.push(routeDataSubscription);
-}
+    const routeDataSubscription = this.route.data.subscribe(data => {
+      if (data['filter']) {
+        this.currentPeriod = data['filter'];
+        this.filterTasks(data['filter']);
+      }
+    });
 
-ngOnDestroy() {
-this.subscriptions.forEach(sub => sub.unsubscribe());
-}
+    this.subscriptions.push(routeSubscription, routeDataSubscription);
+  }
 
+  public ngOnDestroy(): void {
+    this.subscriptions.forEach(sub => sub.unsubscribe());
+  }
 
-private waitForAuthThenLoadTasks() {
-const authSubscription = authState(this.auth).pipe(
-filter(user => user !== null),
-take(1)
-).subscribe({
-next: (user) => {
-if (user) {
-console.log('Auth ready, loading tasks for user:', user.uid);
-this.loadTasks();
-}
-},
-error: (error) => {
-console.error('Auth state error:', error);
-}
-});
+  private waitForAuthThenLoadTasks(): void {
+    const authSubscription = authState(this.auth).pipe(
+      filter((user): user is NonNullable<typeof user> => user !== null),
+      take(1)
+    ).subscribe({
+      next: (user) => {
+        console.log('Auth ready, loading tasks for user:', user.uid);
+        this.loadTasks();
+      },
+      error: (error) => {
+        console.error('Auth state error:', error);
+      }
+    });
+    this.subscriptions.push(authSubscription);
+  }
 
-this.subscriptions.push(authSubscription);
-}
+  private loadTasks(): void {
+    if (!this.auth.currentUser) {
+      console.error('User not authenticated');
+      return;
+    }
+    this.isLoading = true;
+    const taskSubscription = this.taskService.getUserTasks().pipe(
+        finalize(() => this.isLoading = false)
+    ).subscribe({
+      next: (tasks) => {
+        const processedTasks = tasks.map(task => ({
+          ...task,
+          dueDate: task.dueDate instanceof Date ? task.dueDate : new Date(task.dueDate),
+          createdAt: task.createdAt instanceof Date ? task.createdAt : new Date(task.createdAt)
+        }));
+        this.allTasksSubject.next(processedTasks);
+        this.filterTasks(this.currentPeriod);
+      },
+      error: (error) => {
+        console.error('Error loading tasks:', error);
+        this.snackBar.open('Failed to load tasks.', 'Close', { duration: 3000 });
+      }
+    });
+    this.subscriptions.push(taskSubscription);
+  }
 
-private loadTasks() {
-if (!this.auth.currentUser) {
-console.error('User not authenticated');
-return;
-}
+  private filterTasks(period: string): void {
+    const allTasks = this.allTasksSubject.getValue();
+    let filteredTasks = [...allTasks];
 
-this.isLoading = true;
+    if (period && period !== 'all') {
+      const now = new Date();
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
-const taskSubscription = this.taskService.getUserTasks().subscribe({
-next: (tasks) => {
-const processedTasks = tasks.map(task => ({
-...task,
-dueDate: task.dueDate instanceof Date ? task.dueDate : new Date(task.dueDate),
-createdAt: task.createdAt instanceof Date ? task.createdAt : new Date(task.createdAt)
-}));
+      switch (period) {
+        case 'today':
+          this.title = "Today's Tasks";
+          filteredTasks = allTasks.filter(task => {
+            const taskDueDate = new Date(task.dueDate);
+            return taskDueDate.getFullYear() === today.getFullYear() &&
+                   taskDueDate.getMonth() === today.getMonth() &&
+                   taskDueDate.getDate() === today.getDate();
+          });
+          break;
+        case 'week':
+          this.title = "This Week's Tasks";
+          const weekStart = new Date(today);
+          weekStart.setDate(today.getDate() - today.getDay());
+          const weekEnd = new Date(weekStart);
+          weekEnd.setDate(weekStart.getDate() + 6);
+          filteredTasks = allTasks.filter(task => {
+            const taskDueDate = new Date(task.dueDate);
+            return taskDueDate >= weekStart && taskDueDate <= weekEnd;
+          });
+          break;
+        case 'month':
+          this.title = "This Month's Tasks";
+          filteredTasks = allTasks.filter(task => {
+            const taskDueDate = new Date(task.dueDate);
+            return taskDueDate.getFullYear() === now.getFullYear() &&
+                   taskDueDate.getMonth() === now.getMonth();
+          });
+          break;
+        default:
+          this.title = 'All Tasks';
+      }
+    } else {
+      this.title = 'All Tasks';
+    }
+    this.filteredTasksSubject.next(filteredTasks);
+  }
 
-this.allTasksSubject.next(processedTasks);
-this.filterTasks(this.currentPeriod);
-this.isLoading = false;
-},
-error: (error) => {
-console.error('Error loading tasks:', error);
-this.isLoading = false;
-}
-});
+  public onTaskAdded(taskData: Omit<Task, 'id' | 'userId' | 'createdAt'>): void {
+    const now = new Date();
+    
+    
+    const dataToSave = {
+        title: taskData.title,
+        dueDate: taskData.dueDate,
+        city: taskData.city,
+        createdAt: now,
+        completed: false
+    };
 
-this.subscriptions.push(taskSubscription);
-}
+    this.taskService.addTask(dataToSave).subscribe({
+      next: (realId: string) => {
 
-private filterTasks(period: string) {
-const allTasks = this.allTasksSubject.getValue();
-let filteredTasks = [...allTasks];
+        const newTask: Task = {
+          ...dataToSave,
+          id: realId, 
+          userId: this.auth.currentUser?.uid || '',
+        };
 
-if (period) {
-const now = new Date();
-const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const currentTasks = this.allTasksSubject.getValue();
+        this.allTasksSubject.next([newTask, ...currentTasks]);
+        this.filterTasks(this.currentPeriod);
+        console.log(`Task added with Document ID: '${realId}'`);
+      },
+      error: (err: any) => {
+        console.error('Firebase mein task add nahi hua:', err);
+        this.snackBar.open('Error: Task could not be saved .', 'Close', { duration: 3000 });
+      }
+    });
+  }
 
-switch (period) {
-case 'today':
-this.title = "Today's Tasks";
-filteredTasks = allTasks.filter(task => {
-const taskDueDate = task.dueDate instanceof Date ? task.dueDate : new Date(task.dueDate);
-const taskDate = new Date(taskDueDate.getFullYear(),
-taskDueDate.getMonth(),
-taskDueDate.getDate());
-return taskDate.getTime() === today.getTime();
-});
-break;
-case 'week':
-this.title = "This Week's Tasks";
-const weekStart = new Date(today);
-weekStart.setDate(today.getDate() - today.getDay());
-const weekEnd = new Date(weekStart);
-weekEnd.setDate(weekStart.getDate() + 6);
+  public onDeleteTask(taskToDelete: Task): void {
+    const taskId = taskToDelete.id;
+    if (!taskId || this.deletingTasks.has(taskId)) {
+      return;
+    }
 
-filteredTasks = allTasks.filter(task => {
-const taskDueDate = task.dueDate instanceof Date ? task.dueDate : new Date(task.dueDate);
-const taskDate = new Date(taskDueDate.getFullYear(),
-taskDueDate.getMonth(),
-taskDueDate.getDate());
-return taskDate >= today && taskDate <= weekEnd;
-});
-break;
-case 'month':
-this.title = "This Month's Tasks";
-filteredTasks = allTasks.filter(task => {
-const taskDueDate = task.dueDate instanceof Date ? task.dueDate : new Date(task.dueDate);
-const taskDate = new Date(taskDueDate.getFullYear(),
-taskDueDate.getMonth(),
-taskDueDate.getDate());
-return taskDate >= today &&
-taskDueDate.getMonth() === now.getMonth() &&
-taskDueDate.getFullYear() === now.getFullYear();
-});
-break;
-default:
-this.title = 'All Tasks';
-}
-} else {
-this.title = 'My Tasks';
-}
+    const originalTasks = this.allTasksSubject.getValue();
+    this.deletingTasks.add(taskId);
 
-this.filteredTasksSubject.next(filteredTasks);
-}
+    this.allTasksSubject.next(originalTasks.filter(task => task.id !== taskId));
+    this.filterTasks(this.currentPeriod);
 
-onTaskAdded(newTask: Task) {
-authState(this.auth).pipe(
-filter(user => user !== null),
-take(1),
-switchMap(user => this.taskService.addTask(newTask))
-).subscribe({
-next: (taskId) => {
-const taskWithId = {
-...newTask,
-id: taskId,
-dueDate: newTask.dueDate instanceof Date ? newTask.dueDate : new Date(newTask.dueDate),
-createdAt: newTask.createdAt instanceof Date ? newTask.createdAt : new Date(newTask.createdAt)
-};
-const currentTasks = this.allTasksSubject.getValue();
-const updatedTasks = [...currentTasks, taskWithId];
-this.allTasksSubject.next(updatedTasks);
-this.filterTasks(this.currentPeriod);
-},
-error: (error) => {
-console.error('Error adding task:', error);
-}
-});
-}
+    this.taskService.deleteTask(taskId).pipe(
+      finalize(() => {
+        this.deletingTasks.delete(taskId);
+      })
+    ).subscribe({
+      next: () => {
+        this.snackBar.open('Task is deleted!', 'Close', { duration: 2000 });
+      },
+      error: (err: any) => {
+        const message = err.message || '';
+        if (message.toLowerCase().includes('not found')) {
+            console.warn(`Trying to delete a task that has already been deleted (ID: ${taskId}).`);
+        } else {
+            console.error('The task was not deleted in Firebase:', err);
+            this.snackBar.open('Error: Task could not be deleted. Reverting.', 'Close', { duration: 5000 });
+            this.allTasksSubject.next(originalTasks);
+            this.filterTasks(this.currentPeriod);
+        }
+      }
+    });
+  }
 
-onToggleTask(task: Task) {
-if (!task.id || task.id.trim() === '') {
-console.error('Invalid task ID for toggle');
-return;
-}
+  public onToggleTask(task: Task): void {
+    const taskId = task.id;
+    if (!taskId || this.togglingTasks.has(taskId) || this.deletingTasks.has(taskId)) {
+      return;
+    }
 
-const newCompletedState = !task.completed;
+    const originalTasks = this.allTasksSubject.getValue();
+    const newCompletedState = !task.completed;
+    this.togglingTasks.add(taskId);
 
-authState(this.auth).pipe(
-filter(user => user !== null),
-take(1),
-switchMap(user => this.taskService.updateTask(task.id, { completed: newCompletedState }))
-).subscribe({
-next: () => {
-console.log('Task updated successfully in Firebase');
-const allTasks = this.allTasksSubject.getValue();
-const updatedTasks = allTasks.map(t =>
-t.id === task.id ? { ...t, completed: newCompletedState } : t
-);
-this.allTasksSubject.next(updatedTasks);
-this.filterTasks(this.currentPeriod);
-},
-error: (error) => {
-console.error('Error updating task:', error);
-}
-});
-}
+    
+    const updatedTasks = originalTasks.map(t =>
+      t.id === taskId ? { ...t, completed: newCompletedState } : t
+    );
+    this.allTasksSubject.next(updatedTasks);
+    this.filterTasks(this.currentPeriod);
 
-onDeleteTask(task: Task) {
-if (!task.id || task.id.trim() === '') {
-console.error('Invalid task ID for delete');
-return;
-}
+    this.taskService.updateTask(taskId, { completed: newCompletedState }).pipe(
+        finalize(() => {
+            this.togglingTasks.delete(taskId);
+        })
+    ).subscribe({
+      error: (error: any) => {
+        console.error('Error while updating the task:', error);
+        const message = error.message || '';
+        if (message.toLowerCase().includes('no document to update')) {
+            console.warn(`The task got deleted during the toggle (ID: ${taskId}). Removed from the list.`);
+            this.allTasksSubject.next(originalTasks.filter(t => t.id !== taskId));
+        } else {
+            this.snackBar.open('Error:Task could not be updated. Reverting.', 'Close', { duration: 3000 });
+            this.allTasksSubject.next(originalTasks);
+        }
+        this.filterTasks(this.currentPeriod);
+      }
+    });
+  }
 
-console.log('Attempting to delete task:', task.id);
+  public clearAllTasks(): void {
+    if (confirm('Do you really want to delete all tasks?')) {
+      this.taskService.clearAllTasks().subscribe({
+        next: () => {
+          this.allTasksSubject.next([]);
+          this.filterTasks(this.currentPeriod);
+          this.snackBar.open('All tasks have been cleared!', 'Close', { duration: 2000 });
+        },
+        error: (error: any) => {
+          console.error('Error while clearing tasks:', error);
+          this.snackBar.open('Error: Unable to clear tasks.', 'Close', { duration: 3000 });
+        }
+      });
+    }
+  }
 
+  public getCompletedCount(): number {
+    return this.filteredTasksSubject.getValue().filter(t => t.completed).length;
+  }
 
-authState(this.auth).pipe(
-filter(user => user !== null),
-take(1),
-switchMap(user => {
-console.log('User authenticated, proceeding with delete for user:', user.uid);
-return this.taskService.deleteTask(task.id);
-})
-).subscribe({
-next: () => {
-console.log('Task deleted successfully from Firebase');
-const currentTasks = this.allTasksSubject.getValue();
-const updatedTasks = currentTasks.filter(t => t.id !== task.id);
-this.allTasksSubject.next(updatedTasks);
-this.filterTasks(this.currentPeriod);
-},
-error: (error) => {
-console.error('Error deleting task:', error);
+  public getPendingCount(): number {
+    return this.filteredTasksSubject.getValue().filter(t => !t.completed).length;
+  }
 
-}
-});
-}
+  public getTotalCount(): number {
+    return this.filteredTasksSubject.getValue().length;
+  }
 
-clearAllTasks() {
-const confirmed = confirm('Are you sure you want to delete all tasks? This action cannot be undone.');
-if (!confirmed) return;
-
-authState(this.auth).pipe(
-filter(user => user !== null),
-take(1),
-switchMap(user => this.taskService.clearAllTasks())
-).subscribe({
-next: () => {
-console.log('All tasks cleared successfully');
-this.allTasksSubject.next([]);
-this.filterTasks(this.currentPeriod);
-},
-error: (error) => {
-console.error('Error clearing tasks:', error);
-}
-});
-}
-
-getCompletedCount(): number {
-return this.filteredTasksSubject.getValue().filter(t => t.completed).length;
-}
-
-getPendingCount(): number {
-return this.filteredTasksSubject.getValue().filter(t => !t.completed).length;
-}
-
-getTotalCount(): number {
-return this.filteredTasksSubject.getValue().length;
-}
-
-getAllTasksCount(): number {
-return this.allTasksSubject.getValue().length;
-}
-
-getCurrentTasks(): Task[] {
-return this.filteredTasksSubject.getValue();
-}
+  public getAllTasksCount(): number {
+    return this.allTasksSubject.getValue().length;
+  }
 }
