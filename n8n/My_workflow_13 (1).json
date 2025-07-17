@@ -1,0 +1,100 @@
+{
+  "name": "My workflow 13",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        440,
+        0
+      ],
+      "id": "13a09003-915a-4269-abb5-98c1358d2c1c",
+      "name": "No Operation, do nothing"
+    },
+    {
+      "parameters": {
+        "httpMethod": "DELETE",
+        "path": "c9bd66fa-ae96-4faa-b387-9f5f1ddcd0a7",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "id": "05fedcbe-adc9-4c1d-bebb-9ac58730e064",
+      "name": "Webhook",
+      "webhookId": "c9bd66fa-ae96-4faa-b387-9f5f1ddcd0a7"
+    },
+    {
+      "parameters": {
+        "operation": "delete",
+        "documentId": {
+          "__rl": true,
+          "value": "1IpmBHehkvFtV90EIB7aaNr6ZtcQc9m0WvNAFBRFbTZI",
+          "mode": "list",
+          "cachedResultName": "B4",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1IpmBHehkvFtV90EIB7aaNr6ZtcQc9m0WvNAFBRFbTZI/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1IpmBHehkvFtV90EIB7aaNr6ZtcQc9m0WvNAFBRFbTZI/edit#gid=0"
+        }
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.6,
+      "position": [
+        220,
+        0
+      ],
+      "id": "ad145e22-708a-4bb2-8688-b6cff540ee23",
+      "name": "Delete rows or columns from sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "eApo0mpOEaPWcJn8",
+          "name": "Google Sheets account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Delete rows or columns from sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Delete rows or columns from sheet": {
+      "main": [
+        [
+          {
+            "node": "No Operation, do nothing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "39e3b0a4-e3b4-433c-9383-3954bae74893",
+  "meta": {
+    "instanceId": "83b761825fe009c350ac0b22db13da3271ed1c3fb3c350cd3dffb40fbed22eb0"
+  },
+  "id": "deBMCzjrjqyfpgye",
+  "tags": []
+}
