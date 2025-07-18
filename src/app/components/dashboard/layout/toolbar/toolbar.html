@@ -8,7 +8,7 @@
   <div class="location-info" *ngIf="isLocationLoading">
     <mat-spinner [diameter]="20" class="location-spinner"></mat-spinner>
     <span class="location-text">Updating location...</span>
-    <span class="location-hint" *ngIf="currentLocation">(Using cached data)</span>
+    <span class="location-hint" *ngIf="currentLocation"></span>
   </div>
   
   <button 
